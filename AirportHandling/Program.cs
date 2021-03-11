@@ -59,12 +59,22 @@ namespace AirportHandling
 
             mq.PublishToQueue(
                 airplaneRequestsQueueName,
-                new AirplaneRequest(Guid.NewGuid(), RequestType.Landing, true, true)
-                );
+                new AirplaneRequest
+                {
+                    Id = Guid.NewGuid(),
+                    RequestType = RequestType.Landing,
+                    RefuelNeeded = false,
+                    HasVips = true
+                });
             mq.PublishToQueue(
                 airplaneRequestsQueueName,
-                new AirplaneRequest(Guid.NewGuid(), RequestType.Takeoff, true, false)
-                );
+                new AirplaneRequest
+                {
+                    Id = Guid.NewGuid(),
+                    RequestType = RequestType.Takeoff,
+                    RefuelNeeded = true,
+                    HasVips = false
+                });
 
             Console.ReadLine();
         }

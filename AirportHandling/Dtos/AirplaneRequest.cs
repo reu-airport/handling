@@ -19,17 +19,5 @@ namespace AirportHandling.Dtos
         public bool RefuelNeeded { get; set; }
 
         public bool HasVips { get; set; }
-
-        public AirplaneRequest()
-        {
-        }
-
-        public AirplaneRequest(Guid id, RequestType requestType, bool refuelNeeded, bool hasVips)
-        {
-            Id = id;
-            RequestType = requestType;
-            RefuelNeeded = refuelNeeded;
-            HasVips = hasVips;
-        }
     }
 }

@@ -21,15 +21,5 @@ namespace AirportHandling.Dtos
         public VehicleType VehicleType { get; set; }
 
         public int Site { get; set; }
-
-        public VehicleRequest()
-        {
-        }
-
-        public VehicleRequest(VehicleType vehicleType, int site)
-        {
-            VehicleType = vehicleType;
-            Site = site;
-        }
     }
 }

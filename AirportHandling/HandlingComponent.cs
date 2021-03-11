@@ -25,33 +25,31 @@ namespace AirportHandling
 
         private IEnumerable<VehicleType> GetVehiclesOrder(AirplaneRequest request)
         {
-            var vehiclesOrder = new List<VehicleType>();
             if (request.RequestType == RequestType.Landing)
             {
-                vehiclesOrder.Add(VehicleType.FollowMeVan);
+                yield return VehicleType.FollowMeVan;
                 if (request.HasVips)
-                    vehiclesOrder.Add(VehicleType.VipShuttle);
+                    yield return VehicleType.VipShuttle;
                 if (request.RefuelNeeded)
-                    vehiclesOrder.Add(VehicleType.Refueler);
-                vehiclesOrder.Add(VehicleType.BaggageLoader);
-                vehiclesOrder.Add(VehicleType.BaggageVan);
-                vehiclesOrder.Add(VehicleType.Stairs);
-                vehiclesOrder.Add(VehicleType.Bus);
+                    yield return VehicleType.Refueler;
+                yield return VehicleType.BaggageLoader;
+                yield return VehicleType.BaggageVan;
+                yield return VehicleType.Stairs;
+                yield return VehicleType.Bus;
             }
             else
             {
-                vehiclesOrder.Add(VehicleType.Stairs);
-                vehiclesOrder.Add(VehicleType.Bus);
-                vehiclesOrder.Add(VehicleType.BaggageLoader);
-                vehiclesOrder.Add(VehicleType.BaggageVan);
+                yield return VehicleType.Stairs;
+                yield return VehicleType.Bus;
+                yield return VehicleType.BaggageLoader;
+                yield return VehicleType.BaggageVan;
                 if (request.RefuelNeeded)
-                    vehiclesOrder.Add(VehicleType.Refueler);
-                vehiclesOrder.Add(VehicleType.CateringTruck);
+                    yield return VehicleType.Refueler;
+                yield return VehicleType.CateringTruck;
                 if (request.HasVips)
-                    vehiclesOrder.Add(VehicleType.VipShuttle);
-                vehiclesOrder.Add(VehicleType.FollowMeVan);
+                    yield return VehicleType.VipShuttle;
+                yield return VehicleType.FollowMeVan;
             }
-            return vehiclesOrder;
         }
 
         private void OnAirplaneRequest(AirplaneRequest request)
@@ -70,7 +68,11 @@ namespace AirportHandling
             var vehicles = GetVehiclesOrder(request);
             foreach (var vehicle in vehicles)
             {
-                var vehRequest = new VehicleRequest(vehicle, site);
+                var vehRequest = new VehicleRequest
+                {
+                    VehicleType = vehicle,
+                    Site = site
+                };
                 _mqClient.PublishToQueue(_vehicleRequestsQueueName, vehRequest);
             }
         }
