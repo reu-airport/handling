@@ -5,6 +5,7 @@ using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using System.Linq;
 using System.Text.Json.Serialization;
+using System.Collections.Generic;
 
 namespace AirportHandling
 {
@@ -12,7 +13,7 @@ namespace AirportHandling
     {
         IConnection _connection;
         IModel _channel;
-        EventingBasicConsumer _consumer;
+        List<EventingBasicConsumer> _consumers = new List<EventingBasicConsumer>();
         JsonSerializerOptions _serOptions = new JsonSerializerOptions()
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -34,7 +35,7 @@ namespace AirportHandling
             };
             _connection = connFactory.CreateConnection();
             _channel = _connection.CreateModel();
-            _consumer = new EventingBasicConsumer(_channel);
+            //_consumer = new EventingBasicConsumer(_channel);
         }
 
         public RabbitMqWrapper() : this("localhost", "guest", "guest", "/")
@@ -44,8 +45,10 @@ namespace AirportHandling
 
         public void Subscribe<TDto>(string queue, Action<TDto> onMessageCallback)
         {
-            _channel.QueueDeclare(queue, exclusive: false);
-            _consumer.Received += (sender, ea) =>
+            _channel.QueueDeclare(queue, true, false, false, null);
+            var consumer = new EventingBasicConsumer(_channel);
+            _consumers.Add(consumer);
+            consumer.Received += (sender, ea) =>
             {
                 var body = ea.Body.ToArray();
                 var message = Encoding.UTF8.GetString(body);
@@ -57,12 +60,12 @@ namespace AirportHandling
                 var dto = JsonSerializer.Deserialize<TDto>(message, _serOptions);
                 onMessageCallback(dto);
             };
-            _channel.BasicConsume(queue, true, _consumer);
+            _channel.BasicConsume(queue, true, consumer);
         }
 
         public void PublishToQueue<TDto>(string queue, TDto dto)
         {  
-            _channel.QueueDeclare(queue, exclusive: false);
+            _channel.QueueDeclare(queue, true, false, false);
             var message = JsonSerializer.Serialize(dto, _serOptions);
             var body = Encoding.UTF8.GetBytes(message);
             _channel.BasicPublish(string.Empty, queue, body: body);

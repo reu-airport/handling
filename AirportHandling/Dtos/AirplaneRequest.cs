@@ -19,5 +19,7 @@ namespace AirportHandling.Dtos
         public bool RefuelNeeded { get; set; }
 
         public bool HasVips { get; set; }
+
+        public bool HasBaggage { get; set; }
     }
 }

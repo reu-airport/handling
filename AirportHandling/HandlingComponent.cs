@@ -2,25 +2,25 @@
 using AirportHandling.Dtos;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
+using System.Threading;
 
 namespace AirportHandling
 {
     class HandlingComponent
     {
         IMessageQueueClient _mqClient;
-        const string _airplaneRequestsQueueName = "airplane_requests";
-        const string _vehicleRequestsQueueName = "vehicle_requests";
+        const string _airplaneRequestsQueueName = "airplaneRequest";
+        const string _vehicleRequestsQueueName = "vehicleRequest";
+        const string _handlindEndsQueueName = "handlingEnd";
 
-        private ConcurrentQueue<int> _freeDepartureSites = new ConcurrentQueue<int>();
-        private ConcurrentQueue<int> _freeArrivalSites = new ConcurrentQueue<int>();
+        private ConcurrentQueue<AirplaneRequest> requestsQueue = new ConcurrentQueue<AirplaneRequest>();
+        private AutoResetEvent oneSiteFreeHandle = new AutoResetEvent(true);
+        private bool site1Empty = true;
+        private bool site2Empty = true;
 
         public HandlingComponent(IMessageQueueClient mqClient)
         {
             _mqClient = mqClient;
-            _freeDepartureSites.Enqueue(0);
-            _freeDepartureSites.Enqueue(1);
-            _freeArrivalSites.Enqueue(2);
-            _freeArrivalSites.Enqueue(3);
         }
 
         private IEnumerable<VehicleType> GetVehiclesOrder(AirplaneRequest request)
@@ -52,17 +52,37 @@ namespace AirportHandling
             }
         }
 
+        private void OnHandlingEndRequest(HandlingEnd dto)
+        {
+            if (dto.Site == 1)
+                site1Empty = true;
+            else if (dto.Site == 2)
+                site2Empty = true;
+            oneSiteFreeHandle.Set();
+        }
+
         private void OnAirplaneRequest(AirplaneRequest request)
         {
             string requestTypeStr = Enum.GetName(typeof(RequestType), request.RequestType);
             Console.WriteLine($"{DateTime.Now}: got request from airplane #{request.Id}, {requestTypeStr}");
 
-            ConcurrentQueue<int> freeSitesQueue = request.RequestType switch
+            int site = 0;
+            if (!site1Empty && !site2Empty)
             {
-                RequestType.Landing => _freeArrivalSites,
-                RequestType.Takeoff => _freeDepartureSites,
-            };
-            freeSitesQueue.TryDequeue(out int site);
+                oneSiteFreeHandle.Reset();
+                requestsQueue.Enqueue(request);
+                oneSiteFreeHandle.WaitOne();
+            }
+            if (site1Empty)
+            {
+                site = 1;
+                site1Empty = false;
+            } 
+            else if (site2Empty)
+            {
+                site = 2;
+                site2Empty = false;
+            }
             Console.WriteLine($"{DateTime.Now}: request of airplane #{request.Id} fulfilled, site #{site}");
             
             var vehicles = GetVehiclesOrder(request);
@@ -80,6 +100,7 @@ namespace AirportHandling
         public void Run()
         { 
             _mqClient.Subscribe<AirplaneRequest>(_airplaneRequestsQueueName, OnAirplaneRequest);
+            _mqClient.Subscribe<HandlingEnd>(_handlindEndsQueueName, OnHandlingEndRequest);
         }
     }
 }
